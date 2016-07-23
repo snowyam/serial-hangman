@@ -1,5 +1,7 @@
 --- !ruby/object:Noose
-word: heparin
-turn: 7
-wrong_guesses: []
-word_progress: ___a___
+word: peiping
+turn: 4
+wrong_guesses:
+- a
+- o
+word_progress: _ei_i__
