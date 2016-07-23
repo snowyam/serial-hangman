@@ -1,27 +1,48 @@
 # Serial Hangman
 
+require 'yaml'
+
 class Noose
-  attr_accessor :word, :turn
+  attr_accessor :word, :turn, :wrong_guesses, :word_progress
   def initialize(word, turn)
     @word = word
     @turn = turn
     @wrong_guesses = []
-    @word_progess = ""
+    @word_progress = ""
     word.split("").each do |i|
-      @word_guesses << "_"
+      @word_progress << ("_")
     end
   end
 
   def turns_left
     @turn -= 1
+    puts "\n\n"
+    puts "#{@turn} guesses remaining!\n\n"
+    @turn
   end
 
   def guessed(guess)
-
+    if guess.length > 1
+      if guess == @word
+        puts
+        puts "You've won!"
+        @turn = 1
+      else
+        puts "\nNope! Try again!"
+      end
+    else
+      if /#{guess}/.match(@word) != nil
+        puts "\nA match!"
+        update_word(guess)
+      else
+        puts "\nNope! Try again!"
+        update_wrong(guess)
+      end
+    end
   end
 
   def display_word_progress
-    puts @word_progess
+    puts @word_progress
   end
 
   def display_wrong
@@ -32,45 +53,69 @@ class Noose
     puts @word
   end
 
-  def update_word
-
+  def update_word(guess)
+    @word.each_char.with_index do |char, index|
+      if char == guess
+        @word_progress[index] = char
+      end
+    end
+    if @word == @word_progress
+      puts
+      puts "You've won!"
+      @turn = 1
+    end
   end
 
-  def update_wrong
-
+  def update_wrong(guess)
+    @wrong_guesses << guess
   end
 
 end
 
-def save_game
-
+def save_game(noose_object)
+  yaml = YAML::dump(noose_object)
+  save_file = File.open("data/save.yaml", "w")
+  save_file.write(yaml)
 end
 
 def load_game
-
+  #if exist?("data/save.yaml")
+    save_file = File.open("data/save.yaml")
+    yaml = save_file.read
+    noose = YAML::load(yaml)
+    noose
+  #else
+    #puts "No saved file detected. Starting new game."
+    #chosen_word = get_word
+    #noose = Noose.new(chosen_word, chosen_word.length + 2)
+  #end
 end
 
 def display_main_menu
   puts "1. Play!"
   puts "2. Load Save"
-  puts "Enter # option: "
+  print "Enter # option: "
   option = gets.chomp
+  return option
 end
 
-def guess_input(guess)
-  while /[[:alpha]]/.match(guess) == nil
-      puts "Invalid guess, try again:"
-      guess = gets.chomp
-  end
-  guess = guess.downcase!
+def guess_input(guess, noose)
+  guess = guess.to_s.downcase
   if guess == "save"
-    save_game#TODO
-    guess = guess_input(gets.chomp)
+    save_game(noose)
+    puts "Game saved!"
+    puts "Enter your guess(single letter or entire word):" 
+    guess = guess_input(gets.chomp, noose)
   end
+  guess
 end
 
 def get_word
-
+  dict = File.readlines("data/dict.txt").sample.chomp.downcase
+  while dict.length < 5
+    dict = File.readlines("data/dict.txt").sample.chomp.downcase
+  end
+  return dict
 end
 
 # Main game loop
@@ -81,25 +126,31 @@ while !exit
   # Main menu: Start game, load word, load game option
   if start == true
     choice = display_main_menu
-    if choice == 2
-      load_game
+    if choice == "2"
+      noose = load_game
     else
-      #TODO choose word.
+      chosen_word = get_word
+      noose = Noose.new(chosen_word, chosen_word.length + 2)
     end
     start = false
   end
 
-  if turns_left != 0
+  if noose.turns_left > 0
     puts
-    puts "Enter 'save' into prompt to save."
+    puts "Enter 'save' into prompt to save.\n"
     print "Hangman: "
-    display_word_progress
+    noose.display_word_progress
     puts
     print "Attempts: "
-    display_wrong
+    noose.display_wrong
     puts
     puts "Enter your guess(single letter or entire word):"
-    guess = guess_input(gets.chomp)
-
+    guess = guess_input(gets.chomp, noose)
+    noose.guessed(guess)
+  else
+    print "Answer: "
+    noose.display_answer 
+    puts "Game over!"
     exit = true
+  end
 end
